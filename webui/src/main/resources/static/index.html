@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>疫情大数据</title>
+    <script src="js/echarts.js"></script>
+    <script src="js/china.js"></script>
+    <script src="js/jquery.js"></script>
+    <link href="css/bootstrap.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        #main {
+            width: 600px;
+            height: 450px;
+            margin: 150px auto;
+            border: 1px solid #ddd;
+        }
+
+        /*默认长宽比0.75*/
+        .center {
+            margin: auto;
+            width: 70%;
+        }
+    </style>
+
+
+</head>
+<body>
+<div>
+    <h2 align="center">实时疫情大数据平台</h2>
+</div>
+    <br>
+    <hr>
+<div id="covid_all" class="center">
+    <table class="table table-bordered" bgcolor="#b0e0e6">
+        <thead>
+        <tr>
+            <th>
+                时间
+            </th>
+            <th>
+                现存确诊
+            </th>
+            <th>
+                累计确诊
+            </th>
+            <th>
+                现存疑似
+            </th>
+            <th>
+                累计治愈
+            </th>
+            <th>
+                累计死亡
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td id="datetime">1</td>
+            <td id="currentConfirmedCount">1</td>
+            <td id="confirmedCount">1</td>
+            <td id="suspectedCount">1</td>
+            <td id="curedCount">1</td>
+            <td id="deadCount">1</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+    <br>
+    <hr>
+<div id="map_all" style="width: 1500px;height:600px;" class="center"></div>
+    <br>
+    <hr>
+<div id="time_line" style="width: 1500px;height:600px;" class="center"></div>
+    <br>
+    <hr>
+<div id="import_pie" style="width: 1500px;height:600px;" class="center"></div>
+    <br>
+    <hr>
+<div id="covid19_wz" style="width: 1500px;height:600px;" class="center"></div>
+</body>
+
+<script type="text/javascript">
+
+    // 前端的接口 后端只需要实现 接口 返回json即可
+    /*--------------------全国统计数据-----------------------------*/
+    $.getJSON("http://43.138.166.220:8080/covid/getNationalData", function (data) {
+        var map = data.data
+        $("#datetime").html(map.datetime)
+        $("#currentConfirmedCount").html(map.currentConfirmedCount)
+        $("#confirmedCount").html(map.confirmedCount)
+        $("#suspectedCount").html(map.suspectedCount)
+        $("#curedCount").html(map.curedCount)
+        $("#deadCount").html(map.deadCount)
+    })
+
+
+    /*--------------------全国地图-----------------------------*/
+    var dataList=[
+        {name: '北京', value: 100},
+        {name: '上海', value: randomValue()}
+    ]
+    var myMapChart = echarts.init(document.getElementById('map_all'));
+    function randomValue() {
+        return Math.round(Math.random()*1000);
+    }
+    myMapChart.setOption({
+        title: {
+            text: '全国疫情地图'
+        },
+        tooltip: {
+            formatter:function(params,ticket, callback){
+                return params.seriesName+'<br />'+params.name+'：'+params.value
+            }
+        }, // 显示触发事件
+
+        visualMap: {
+            // 显示左下角的数据
+            min: 0,
+            max: 1500,
+            left: 'left',
+            top: 'bottom',
+            text: ['多','少'],
+            inRange: {
+                color: ['#ffe5bf', '#ffa372', '#ff7e86','#ee1216','#B22222']
+            },
+            show:true
+        },
+        geo: {
+            map: 'china',
+            roam: true,//不开启缩放和平移
+            zoom: 1.23,//视角缩放比例
+            label: {
+                normal: {
+                    show: true,
+                    fontSize:'10',
+                    color: 'rgba(0,0,0,0.7)'
+                }
+            },
+            itemStyle: {
+                normal:{
+                    borderColor: 'rgba(0, 0, 0, 0.2)'
+                },
+                emphasis:{
+                    areaColor: '#AEEEEE',//鼠标悬停区域颜色
+                    shadowOffsetX: 0,
+                    shadowOffsetY: 0,
+                    shadowBlur: 20,
+                    borderWidth: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            }
+        },
+        series : [
+            {
+                name: '累计确诊',
+                type: 'map',
+                geoIndex: 0,
+                data:dataList
+            }
+        ]
+    });
+
+    myMapChart.on('click', function (params) {
+        // 到时可设置成跳转
+        alert(params.name);
+    });
+
+    setTimeout(function () {
+        // 异步加载json格式数据
+        $.getJSON('http://43.138.166.220:8080/covid/getNationalMapData', function(data) {
+            myMapChart.setOption({
+                series: [{
+                    data: data.data
+                }]
+            });
+        });
+    }, 1000)
+
+
+    /*--------------------时间趋势折线图-----------------------------*/
+    var myLineChart = echarts.init(document.getElementById("time_line"));
+    myLineChart.setOption({
+        title: {
+            text: '疫情趋势'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: ['新增确诊', '累计确诊', '疑似病例', '累计治愈', '累计死亡']
+        },
+        dataset: {
+            // 这里指定了维度名的顺序，从而可以利用默认的维度到坐标轴的映射。
+            dimensions: ['dateId', '新增确诊', '累计确诊', '疑似病例', '累计治愈', '累计死亡'],
+            source: []
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        toolbox: {
+            feature: {
+                saveAsImage: {}
+            }
+        },
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: []
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: [
+            {type: 'line'},
+            {type: 'line'},
+            {type: 'line'},
+            {type: 'line'},
+            {type: 'line'}
+        ]
+    });
+
+
+    var xdata2 = [];//x轴
+    $.getJSON('http://43.138.166.220:8080/covid/getCovidTimeData', function (data) {
+        var arr = data.data
+        for (var i = 0; i < arr.length; i++) {
+            xdata2.push(arr[i].dateId)
+        }
+        myLineChart.setOption({
+            dataset: {
+                source: data.data
+            },
+            xAxis: {
+                data: xdata2
+            }
+        })
+    })
+
+
+
+    /*--------------------境外输入饼图-----------------------------*/
+    var myPieChart = echarts.init(document.getElementById("import_pie"));
+    myPieChart.setOption({
+        title: {
+            text: '境外输入统计'
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b} : {c} ({d}%)'
+        },
+        legend: {
+            type: 'scroll',
+            orient: 'vertical',
+            right: 10,
+            top: 20,
+            bottom: 20,
+        },
+        series : [
+            {
+                name: '境外输入',
+                type: 'pie',    // 设置图表类型为饼图
+                radius: '70%',  // 饼图的半径
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                data:[          // 数据数组，name 为数据项名称，value 为数据项值
+                    {value:235, name:'视频广告'},
+                    {value:274, name:'联盟广告'},
+                    {value:310, name:'邮件营销'},
+                    {value:335, name:'直接访问'},
+                    {value:400, name:'搜索引擎'}
+                ]
+            }
+        ]
+    })
+    $.getJSON('http://43.138.166.220:8080/covid/getCovidImportData', function (data) {
+        myPieChart.setOption({
+            series:[{
+                data: data.data
+            }]
+        })
+    })
+
+    /*--------------------救援物资-----------------------------*/
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('covid19_wz'),"dark");
+    myChart.setOption({
+        title: {
+            text: '救援物资'
+        },
+        legend: {},
+        tooltip: {},
+        dataset: {
+            // 这里指定了维度名的顺序，从而可以利用默认的维度到坐标轴的映射。
+            dimensions: ['name', '采购', '下拨', '捐赠', '消耗', '需求', '库存'],
+            source: []
+        },
+        xAxis: {
+            type: 'category',
+            data: []
+        },
+        yAxis: {},
+        series: [
+            {type: 'bar'},
+            {type: 'bar'},
+            {type: 'bar'},
+            {type: 'bar'},
+            {type: 'bar'},
+            {type: 'bar'}
+        ]
+    });
+
+    var xdata = [];//x轴
+    $.getJSON("http://43.138.166.220:8080/covid/getCovidWz", function (data) {
+        var arr = data.data
+        for (var i = 0; i < arr.length; i++) {
+            xdata.push(arr[i].name)
+        }
+        myChart.setOption({
+            dataset: {
+                source: data.data
+            },
+            xAxis: {
+                data: xdata
+            }
+        })
+    })
+
+</script>
+</html>

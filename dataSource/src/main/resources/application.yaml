@@ -1,0 +1,26 @@
+server:
+  port: 9999
+
+spring:
+  kafka:
+    bootstrap-servers: 192.168.10.102:9092,192.168.10.103:9092,192.168.10.104:9092
+    producer:
+      retries: 0
+      batch-size: 4096
+      buffer-memory: 40960
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        # 值的序列化方式
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+
+
+  datasource:
+    username: root
+    password: 123456
+    url: jdbc:mysql://43.138.166.220:3306/software?useUnicode=true&useSSL=false&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useAffectedRows=true&allowMultiQueries=true
+    driver-class-name: com.mysql.jdbc.Driver
+
+
+
+# jdbc:mysql://43.138.166.220:3306/bigdata?useUnicode=true&useSSL=false&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useAffectedRows=true&allowMultiQueries=true
+
